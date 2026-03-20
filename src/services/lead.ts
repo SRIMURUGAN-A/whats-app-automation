@@ -5,43 +5,52 @@ export class LeadService {
      * Get or Create a lead by phone number
      */
     static async getOrCreateLead(phoneNumber: string) {
-        // Strip non-numeric characters and get the base 10 digits
+        // Normalize the phone number
         const clean = phoneNumber.replace(/\D/g, '');
         const base = clean.length > 10 ? clean.slice(-10) : clean;
         const normalized = `+${clean.startsWith('91') && clean.length > 10 ? clean : '91' + base}`;
         
-        // Search for any form of the number to avoid duplicate leads
-        const variants = [phoneNumber, clean, base, normalized, `+${clean}`];
+        // Comprehensive search for any existing record with this number
+        const variants = Array.from(new Set([
+            normalized,
+            phoneNumber,
+            `+${clean}`,
+            clean,
+            base,
+            `91${base}`
+        ])).filter(v => v && v.length >= 10);
 
         const { data, error } = await supabase
             .from('leads')
             .select('*')
             .in('phone_number', variants)
+            .limit(1)
             .maybeSingle();
 
-        // If not found, create it as the normalized version
-        if (!data) {
+        if (data) return data;
+
+        // If not found, attempt to insert as normalized
+        try {
             const { data: lead, error: insertError } = await supabase
                 .from('leads')
                 .insert([{ phone_number: normalized }])
                 .select()
-                .maybeSingle();
+                .single();
 
-            if (insertError) {
-                // If it still fails due to a race condition or existing number, try one last lookup
-                const { data: retryLead } = await supabase
-                    .from('leads')
-                    .select('*')
-                    .eq('phone_number', normalized)
-                    .maybeSingle();
-                
-                if (retryLead) return retryLead;
-                throw insertError;
-            }
+            if (insertError) throw insertError;
             return lead;
+        } catch (err: any) {
+            // If it failed with a 23505 (unique violation), it means a lead was created between our select and insert.
+            // Try one final retrieval.
+            const { data: finalRetry } = await supabase
+                .from('leads')
+                .select('*')
+                .in('phone_number', variants)
+                .maybeSingle();
+            
+            if (finalRetry) return finalRetry;
+            throw err;
         }
-
-        return data;
     }
 
     /**

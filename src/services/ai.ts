@@ -6,11 +6,14 @@ dotenv.config();
 const apiKey = process.env.GOOGLE_API_KEY || '';
 const genAI = new GoogleGenerativeAI(apiKey);
 
+
 // Based on your specific key's availability, we use the 2.0 series
 // Adding 'models/' prefix ensures the SDK finds it correctly
 // Using latest stable models as of 2025/2026
-const chatModel = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
-const embeddingModel = genAI.getGenerativeModel({ model: 'embedding-001' });
+// Using models discovered to be available for this API key
+// Using models discovered to be available for this API key
+const chatModel = genAI.getGenerativeModel({ model: 'gemini-flash-lite-latest' }); // Trying Lite for more stability
+const embeddingModel = genAI.getGenerativeModel({ model: 'gemini-embedding-001' });
 
 export class AIService {
     /**
@@ -31,7 +34,8 @@ export class AIService {
         } catch (error: any) {
             console.error('Gemini Embedding Error:', error.message);
             // Fallback to zero vector if embedding fails (prevents RAG crash)
-            return new Array(768).fill(0);
+            // Updated to 3072 to match gemini-embedding-001
+            return new Array(3072).fill(0);
         }
     }
 
@@ -65,13 +69,29 @@ INSTRUCTIONS:
 - Conclude with a relevant follow-up question.
 `;
 
-        try {
-            const result = await chatModel.generateContent(systemPrompt);
-            return result.response.text();
-        } catch (error: any) {
-            console.error('Gemini Chat Error:', error.message);
-            return 'Sorry, I am having trouble processing that right now. Let me connect you with a real person 👨‍💻';
+
+        console.log(`[AI] Generating response with prompt length: ${systemPrompt.length}`);
+        let retries = 3;
+        while (retries > 0) {
+            try {
+                const result = await chatModel.generateContent(systemPrompt);
+                return result.response.text();
+            } catch (error: any) {
+                retries--;
+                console.error(`Gemini Chat Attempt Failed (Retries left: ${retries}):`, error.message);
+                if (retries === 0) {
+                    console.error('Gemini Chat Error Details:', {
+                        message: error.message,
+                        stack: error.stack,
+                        cause: error.cause
+                    });
+                    return 'Sorry, I am having trouble processing that right now. Let me connect you with a real person 👨‍💻';
+                }
+                // Wait briefly before retrying
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
         }
+        return 'Connection issues, please try again.';
     }
 
     /**

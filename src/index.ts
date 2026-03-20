@@ -1,10 +1,10 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
-import dotenv from 'dotenv';
 import apiRoutes from './routes/index.js';
-
-dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3000;
