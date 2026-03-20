@@ -8,8 +8,9 @@ const genAI = new GoogleGenerativeAI(apiKey);
 
 // Based on your specific key's availability, we use the 2.0 series
 // Adding 'models/' prefix ensures the SDK finds it correctly
-const chatModel = genAI.getGenerativeModel({ model: 'models/gemini-2.0-flash' });
-const embeddingModel = genAI.getGenerativeModel({ model: 'models/text-embedding-004' });
+// Using latest stable models as of 2025/2026
+const chatModel = genAI.getGenerativeModel({ model: 'models/gemini-2.5-flash' });
+const embeddingModel = genAI.getGenerativeModel({ model: 'models/gemini-embedding-001' });
 
 export class AIService {
     /**
@@ -17,8 +18,11 @@ export class AIService {
      */
     static async generateEmbedding(text: string): Promise<number[]> {
         try {
-            // Trying standard embedding with models/ prefix
-            const result = await embeddingModel.embedContent(text);
+            // Using gemini-embedding-001 with reduced dims to match Supabase schema (768)
+            const result = await embeddingModel.embedContent({
+                content: { role: 'user', parts: [{ text }] },
+                outputDimensionality: 768
+            } as any);
             const embedding = result.embedding.values;
             
             if (!embedding || embedding.length === 0) {
