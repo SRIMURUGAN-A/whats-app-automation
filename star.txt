@@ -1,0 +1,4 @@
+npm run dev 
+ngrok http 3000
+npm run dashboard:dev   
+http://127.0.0.1:4040/inspect/http

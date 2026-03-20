@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node dist/index.js",
     "dev": "tsx watch src/index.ts",
-    "build": "tsc"
+    "build": "tsc",
+    "dashboard:install": "cd dashboard && npm install",
+    "dashboard:dev": "cd dashboard && npm run dev"
   },
   "keywords": [],
   "author": "",

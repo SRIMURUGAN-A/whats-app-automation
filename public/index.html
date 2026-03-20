@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Sales Outreach - Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); }
+        .bg-mesh {
+            background-color: #f8fafc;
+            background-image: 
+                radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
+                radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), 
+                radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
+            background-attachment: fixed;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div x-data="dashboard()" x-init="fetchStats()" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between mb-10">
+            <div>
+                <h1 class="text-4xl font-extrabold text-gray-900 tracking-tight">AI Outreach Dashboard</h1>
+                <p class="mt-2 text-lg text-gray-600">Proactively scaling your business with Gemini 2.5 Flash.</p>
+            </div>
+            <div class="mt-4 md:mt-0 flex space-x-3">
+                <button @click="showAddLead = true" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-xl font-semibold shadow-lg transition-all transform hover:scale-105">
+                    + Add New Lead
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
+            <template x-for="(val, key) in stats" :key="key">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center">
+                    <span class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1" x-text="key"></span>
+                    <span class="text-4xl font-black text-indigo-600" x-text="val"></span>
+                </div>
+            </template>
+        </div>
+
+        <!-- Campaign Actions Card -->
+        <div class="bg-gradient-to-r from-indigo-900 via-blue-900 to-slate-900 rounded-3xl p-8 mb-12 shadow-2xl relative overflow-hidden">
+            <div class="relative z-10 flex flex-col md:flex-row items-center justify-between">
+                <div class="text-center md:text-left mb-6 md:mb-0">
+                    <h2 class="text-2xl font-bold text-white mb-2">Campaign Power Actions</h2>
+                    <p class="text-indigo-200">Personalize all pending leads then launch the campaign instantly.</p>
+                </div>
+                <div class="flex flex-wrap gap-4 justify-center">
+                    <button 
+                        @click="personalize()" 
+                        :disabled="loading"
+                        class="bg-white/10 hover:bg-white/20 text-white border border-white/30 px-8 py-3 rounded-2xl font-bold flex items-center transition-all disabled:opacity-50"
+                    >
+                        <span x-show="!loading">🧠 Personalize with AI</span>
+                        <span x-show="loading">Working...</span>
+                    </button>
+                    <button 
+                        @click="launch()" 
+                        :disabled="loading"
+                        class="bg-green-500 hover:bg-green-600 text-white px-8 py-3 rounded-2xl font-bold shadow-xl transition-all disabled:opacity-50"
+                    >
+                        <span x-show="!loading">🚀 Launch Campaign</span>
+                        <span x-show="loading">Sending...</span>
+                    </button>
+                </div>
+            </div>
+            <!-- Decorative background blob -->
+            <div class="absolute -top-10 -right-10 w-40 h-40 bg-indigo-500/20 rounded-full blur-3xl"></div>
+            <div class="absolute -bottom-10 -left-10 w-40 h-40 bg-blue-500/20 rounded-full blur-3xl"></div>
+        </div>
+
+        <!-- Add Lead Modal -->
+        <div x-show="showAddLead" class="fixed inset-0 z-50 overflow-y-auto" style="display: none;">
+            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div @click="showAddLead = false" class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" aria-hidden="true"></div>
+                <div class="inline-block align-bottom bg-white rounded-3xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                    <div class="bg-white px-8 py-10">
+                        <h3 class="text-2xl font-bold text-gray-900 mb-6">New Outreach Lead</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                                <input type="text" x-model="newLead.name" class="w-full bg-gray-50 border-0 ring-1 ring-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-600 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
+                                <input type="text" x-model="newLead.company_name" class="w-full bg-gray-50 border-0 ring-1 ring-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-600 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Phone Number (with code)</label>
+                                <input type="text" placeholder="+1234..." x-model="newLead.phone_number" class="w-full bg-gray-50 border-0 ring-1 ring-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-600 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Business Context (for AI)</label>
+                                <textarea rows="3" x-model="newLead.business_details" class="w-full bg-gray-50 border-0 ring-1 ring-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-600 outline-none"></textarea>
+                            </div>
+                        </div>
+                        <div class="mt-8 flex space-x-3">
+                            <button @click="addLead()" class="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold shadow-lg">Save Lead</button>
+                            <button @click="showAddLead = false" class="flex-1 bg-gray-100 text-gray-600 py-3 rounded-xl font-bold">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Feedback UI -->
+        <div x-show="message" x-transition class="fixed bottom-5 right-5 bg-black text-white px-6 py-4 rounded-2xl shadow-2xl z-[60]" x-text="message" style="display: none;"></div>
+
+    </div>
+
+    <script>
+        function dashboard() {
+            return {
+                stats: { total: 0, sents: 0, pending: 0, replied: 0 },
+                showAddLead: false,
+                loading: false,
+                message: '',
+                newLead: { name: '', company_name: '', phone_number: '', business_details: '' },
+                
+                async fetchStats() {
+                    try {
+                        const res = await fetch('/api/outreach/stats');
+                        this.stats = await res.json();
+                    } catch (e) { console.error('Stats Error', e); }
+                },
+
+                async addLead() {
+                    try {
+                        const res = await fetch('/api/outreach/leads', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(this.newLead)
+                        });
+                        if (res.ok) {
+                            this.notify('Lead added successfully!');
+                            this.showAddLead = false;
+                            this.newLead = { name: '', company_name: '', phone_number: '', business_details: '' };
+                            await this.fetchStats();
+                        }
+                    } catch (e) { this.notify('Error saving lead'); }
+                },
+
+                async personalize() {
+                    this.loading = true;
+                    try {
+                        const res = await fetch('/api/outreach/campaign/personalize', { method: 'POST' });
+                        const data = await res.json();
+                        this.notify(`Personalized ${data.count} leads.`);
+                        await this.fetchStats();
+                    } finally { this.loading = false; }
+                },
+
+                async launch() {
+                    this.loading = true;
+                    try {
+                        const res = await fetch('/api/outreach/campaign/launch', { method: 'POST' });
+                        const data = await res.json();
+                        this.notify(`Campaign launched! Sent ${data.sentCount} messages.`);
+                        await this.fetchStats();
+                    } finally { this.loading = false; }
+                },
+
+                notify(msg) {
+                    this.message = msg;
+                    setTimeout(() => { this.message = ''; }, 4000);
+                }
+            }
+        }
+    </script>
+</body>
+</html>

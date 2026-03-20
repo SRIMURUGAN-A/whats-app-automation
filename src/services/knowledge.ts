@@ -16,8 +16,8 @@ export class KnowledgeService {
             match_count: match_count,
         });
 
-        if (error) {
-            console.error('Error searching knowledge base:', error);
+        if (error || !data) {
+            console.error('Error searching knowledge base or no data returned:', error?.message);
             return '';
         }
 
